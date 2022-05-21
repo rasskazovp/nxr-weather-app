@@ -1,0 +1,13 @@
+{
+  "profiles": {
+    "nxr-weather-app-api": {
+      "commandName": "Project"
+    },
+    "Docker": {
+      "commandName": "Docker",
+      "launchUrl": "{Scheme}://{ServiceHost}:{ServicePort}",
+      "httpPort": 30691,
+      "useSSL": false
+    }
+  }
+}
