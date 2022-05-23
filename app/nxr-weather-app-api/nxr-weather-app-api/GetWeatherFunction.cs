@@ -15,8 +15,6 @@ using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Attributes;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Blob;
 using Newtonsoft.Json;
 using TinyCsvParser;
 using TinyCsvParser.Mapping;
@@ -26,7 +24,7 @@ namespace nxr_weather_app_api
 {
     public class GetWeatherFunction
     {
-        private readonly ILogger<GetWeatherFunction> _logger;
+        private readonly ILogger _logger;
         private readonly string _backEndStorageConnString;
         private readonly string _backEndContainierName;
 
@@ -56,9 +54,15 @@ namespace nxr_weather_app_api
                 List<SensorData> parsedDataResult = await processGetSensorDataRequest(iotContainier, req.Query["deviceId"], req.Query["sensorType"], req.Query["date"]);
                 return new OkObjectResult(JsonConvert.SerializeObject(parsedDataResult));
             }
-            catch(Exception ex)
+            catch (FileNotFoundException ex)
             {
-                return new BadRequestObjectResult(new { status = "Failed", errorMsg = ex.Message });
+                var responseObj = new { status = "Data Not Found", errorMsg = ex.Message };
+                return new BadRequestObjectResult(JsonConvert.SerializeObject(responseObj));
+            }
+            catch (Exception ex)
+            {
+                var responseObj = new { status = "Failed", errorMsg = ex.Message };
+                return new BadRequestObjectResult(JsonConvert.SerializeObject(responseObj));
             }
         }
 
@@ -74,6 +78,7 @@ namespace nxr_weather_app_api
             _logger.LogInformation("C# HTTP trigger function processed a request.");
 
             BlobContainerClient iotContainier = new BlobContainerClient(_backEndStorageConnString, _backEndContainierName);
+            string deviceId = req.Query["deviceId"];
 
             try
             {
@@ -87,24 +92,32 @@ namespace nxr_weather_app_api
                 using (var metadataStream = new MemoryStream())
                 {
                     await metadataBlobClient.DownloadToAsync(metadataStream);
+                    metadataStream.Seek(0, SeekOrigin.Begin);
                     using (StreamReader sr = new StreamReader(metadataStream))
                     {
                         string line;
                         while ((line = sr.ReadLine()) != null)
                         {
                             string [] lineElems = line.Split(';');
-                            if (lineElems[0] == req.Query["deviceId"])
+                            if (lineElems[0] == deviceId)
                             {
                                 parsedDataResult.AddRange(await processGetSensorDataRequest(iotContainier, req.Query["deviceId"], lineElems[1], req.Query["date"]));
                             }
                         }
                     }
+                    if (!parsedDataResult.Any()) throw new FileNotFoundException($"No data were found for {deviceId}.");
                 }
                 return new OkObjectResult(JsonConvert.SerializeObject(parsedDataResult));
             }
+            catch (FileNotFoundException ex)
+            {
+                var responseObj = new { status = "Data Not Found", errorMsg = ex.Message };
+                return new BadRequestObjectResult(JsonConvert.SerializeObject(responseObj));
+            }
             catch (Exception ex)
             {
-                return new BadRequestObjectResult(new { status = "Failed", errorMsg = ex.Message });
+                var responseObj = new { status = "Failed", errorMsg = ex.Message };
+                return new BadRequestObjectResult(JsonConvert.SerializeObject(responseObj));
             }
         }
 
@@ -130,6 +143,7 @@ namespace nxr_weather_app_api
             {
                 string historicalDataArchiveBlobPath = $"{deviceId}/{sensorType}/historical.zip";
                 BlobClient historicalDataArchiveBlobClient = iotContainier.GetBlobClient(historicalDataArchiveBlobPath);
+                if (!await historicalDataArchiveBlobClient.ExistsAsync()) throw new FileNotFoundException($"{deviceId}/{sensorType}/historical.zip file not exists.");
 
                 ZipArchiveEntry singleHistoricalFileArchive;
                 using (var historicalDataArchiveStream = new MemoryStream())
@@ -150,7 +164,7 @@ namespace nxr_weather_app_api
                     }
                     else
                     {
-                        throw new Exception($"Data for requested device={deviceId}, sensor={sensorType} and date={date} not found");     
+                        throw new FileNotFoundException($"Data for requested device={deviceId}, sensor={sensorType} and date={date} not found");     
                     }
                 }
             }
@@ -177,8 +191,9 @@ namespace nxr_weather_app_api
         }
     }
 
-    public class SensorData
+    public class SensorData 
     {
+        // TODO: consider enriching model with sensor type filed
         public DateTime EventDateTime { get; set; }
         public double SensorValue { get; set; }
     } 
