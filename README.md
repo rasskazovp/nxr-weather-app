@@ -48,3 +48,8 @@ with below content providing connection string to your storagae.
 
 - **Publish** solution to you Azure Function App (Windows), .Net 6.0 or via on Azure Dunction App Containier using Docker.
 - **Set** envarionmental variable "sigma-iot-storage-conn-string" providing connection string to storage as value.
+
+# API usage
+
+API exposes swagger UI under URI - 
+http://localhost:7071/api/swagger/ui (you may have different port) for local or under http://\<function-app-name\>.azurewebsites.net/api/swagger/ui for azure function deployment. Go to that link to check available function, their usage, and check their behaviour.
