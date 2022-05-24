@@ -16,6 +16,7 @@ using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Attributes;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
+using nxr_weather_app_api.Models;
 using TinyCsvParser;
 using TinyCsvParser.Mapping;
 using TinyCsvParser.TypeConverter;
@@ -44,7 +45,6 @@ namespace nxr_weather_app_api
         public async Task<IActionResult> getData(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = null)] HttpRequest req)
         {
-            //Route = "v1/devices/{deviceId}/data/{date}/{sensorType}
             _logger.LogInformation("C# HTTP trigger function processed a request.");
 
             BlobContainerClient iotContainier = new BlobContainerClient(_backEndStorageConnString, _backEndContainierName);
@@ -74,7 +74,6 @@ namespace nxr_weather_app_api
         public async Task<IActionResult> getDataForDevice(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = null)] HttpRequest req)
         {
-            // Route = "v1/devices/{deviceId}/data/{date}"
             _logger.LogInformation("C# HTTP trigger function processed a request.");
 
             BlobContainerClient iotContainier = new BlobContainerClient(_backEndStorageConnString, _backEndContainierName);
@@ -83,16 +82,14 @@ namespace nxr_weather_app_api
             try
             {
                 _logger.LogInformation($"Reading sensor types from metadata.");
-
                 List<SensorData> parsedDataResult = new List<SensorData>();
-
-                string metadataPath = $"metadata.csv";
-                BlobClient metadataBlobClient = iotContainier.GetBlobClient(metadataPath);
+                BlobClient metadataBlobClient = iotContainier.GetBlobClient("metadata.csv");
 
                 using (var metadataStream = new MemoryStream())
                 {
                     await metadataBlobClient.DownloadToAsync(metadataStream);
                     metadataStream.Seek(0, SeekOrigin.Begin);
+
                     using (StreamReader sr = new StreamReader(metadataStream))
                     {
                         string line;
@@ -101,7 +98,9 @@ namespace nxr_weather_app_api
                             string [] lineElems = line.Split(';');
                             if (lineElems[0] == deviceId)
                             {
-                                parsedDataResult.AddRange(await processGetSensorDataRequest(iotContainier, req.Query["deviceId"], lineElems[1], req.Query["date"]));
+                                parsedDataResult.AddRange(
+                                    await processGetSensorDataRequest(iotContainier, req.Query["deviceId"], lineElems[1], req.Query["date"])
+                                );
                             }
                         }
                     }
@@ -125,33 +124,24 @@ namespace nxr_weather_app_api
         {
             List<SensorData> parsedDataResult;
 
-            string dataFilePath = $"{deviceId}/{sensorType}/{date}.csv";
-            BlobClient dataBlobClient = iotContainier.GetBlobClient(dataFilePath);
-
-            if (await dataBlobClient.ExistsAsync()) // Check if exists uncompressed data file
+            BlobClient dataBlobClient = iotContainier.GetBlobClient($"{deviceId}/{sensorType}/{date}.csv");
+            if (await dataBlobClient.ExistsAsync())     // Check if exists uncompressed data file
             {
-                _logger.LogInformation($"Reading {sensorType} sensor data from uncomressed file.");
-
-                using (var dataFileStream = new MemoryStream())
-                {
-                    await dataBlobClient.DownloadToAsync(dataFileStream);
-                    dataFileStream.Seek(0, SeekOrigin.Begin);
-                    parsedDataResult = parseCsvContent(dataFileStream);
-                }
+                parsedDataResult = await readAndParseData(dataBlobClient);
             }
             else
             {
-                string historicalDataArchiveBlobPath = $"{deviceId}/{sensorType}/historical.zip";
-                BlobClient historicalDataArchiveBlobClient = iotContainier.GetBlobClient(historicalDataArchiveBlobPath);
-                if (!await historicalDataArchiveBlobClient.ExistsAsync()) throw new FileNotFoundException($"{deviceId}/{sensorType}/historical.zip file not exists.");
+                BlobClient historicalDataArchiveBlobClient = iotContainier.GetBlobClient($"{deviceId}/{sensorType}/historical.zip");
+                
+                if (!await historicalDataArchiveBlobClient.ExistsAsync()) 
+                    throw new FileNotFoundException($"{deviceId}/{sensorType}/historical.zip file not exists.");
 
-                ZipArchiveEntry singleHistoricalFileArchive;
                 using (var historicalDataArchiveStream = new MemoryStream())
                 {
                     await historicalDataArchiveBlobClient.DownloadToAsync(historicalDataArchiveStream);
                     historicalDataArchiveStream.Seek(0, SeekOrigin.Begin);
                     ZipArchive historicalDataArchive = new ZipArchive(historicalDataArchiveStream);
-                    singleHistoricalFileArchive = historicalDataArchive.GetEntry($"{date}.csv");
+                    ZipArchiveEntry singleHistoricalFileArchive = historicalDataArchive.GetEntry($"{date}.csv");
 
                     if (singleHistoricalFileArchive != null)
                     {
@@ -171,9 +161,21 @@ namespace nxr_weather_app_api
             return parsedDataResult;
         }
 
+        private async Task<List<SensorData>> readAndParseData(BlobClient blobClient)
+        {
+            _logger.LogInformation($"Reading blob from storage...");
+
+            using (var csvDataStream = new MemoryStream())
+            {
+                await blobClient.DownloadToAsync(csvDataStream);
+                csvDataStream.Seek(0, SeekOrigin.Begin);
+                return parseCsvContent(csvDataStream);
+            }
+        }
+
         private List<SensorData> parseCsvContent(Stream dataStream, bool skipHeaderchar=false, char csvDelimiter=';')
         {
-            _logger.LogInformation("Start parsing CSV content.");
+            _logger.LogInformation("Parsing CSV content...");
 
             NumberFormatInfo numberFormatProvider = new NumberFormatInfo();
             numberFormatProvider.NumberDecimalSeparator = ",";
@@ -190,13 +192,6 @@ namespace nxr_weather_app_api
             return dataResult.ToList(); // Not clear requirments regarding how output should look like, it could be adjuste here.
         }
     }
-
-    public class SensorData 
-    {
-        // TODO: consider enriching model with sensor type filed
-        public DateTime EventDateTime { get; set; }
-        public double SensorValue { get; set; }
-    } 
 
     public class CsvSensorDataMapping : CsvMapping<SensorData>
     {

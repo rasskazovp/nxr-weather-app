@@ -7,6 +7,7 @@ using Moq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using nxr_weather_app_api;
+using nxr_weather_app_api.Models;
 using System.Collections;
 
 namespace nxr_weather_app_test
