@@ -1,5 +1,7 @@
 app/nxr-weather-app-test/bin
 app/nxr-weather-app-test/obj
 
+app/nxr-weather-app-test/Properties/launchSettings.json
+
 .vs
 app/nxr-weather-app-api/.vs
