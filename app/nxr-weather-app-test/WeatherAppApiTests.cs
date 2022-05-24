@@ -20,7 +20,10 @@ namespace nxr_weather_app_test
                 var reader = new JsonTextReader(file);
                 var jsonObj = JObject.Load(reader);
 
-                Environment.SetEnvironmentVariable("sigma-iot-storage-conn-string", jsonObj["profiles"]["nxr-weather-app-test"]["sigma-iot-storage-conn-string"].ToString());                
+                Environment.SetEnvironmentVariable(
+                    "sigma-iot-storage-conn-string", 
+                    jsonObj["profiles"]["nxr-weather-app-test"]["environmentVariables"]["sigma-iot-storage-conn-string"].ToString()
+                );                
             }       
         }
 

@@ -18,8 +18,6 @@ using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
 using nxr_weather_app_api.Models;
 using TinyCsvParser;
-using TinyCsvParser.Mapping;
-using TinyCsvParser.TypeConverter;
 
 namespace nxr_weather_app_api.APIs
 {
@@ -151,8 +149,8 @@ namespace nxr_weather_app_api.APIs
                 {
                     await historicalDataArchiveBlobClient.DownloadToAsync(historicalDataArchiveStream);
                     historicalDataArchiveStream.Seek(0, SeekOrigin.Begin);
-                    ZipArchive historicalDataArchive = new ZipArchive(historicalDataArchiveStream);
-                    ZipArchiveEntry singleHistoricalFileArchive = historicalDataArchive.GetEntry($"{date}.csv");
+
+                    ZipArchiveEntry singleHistoricalFileArchive = new ZipArchive(historicalDataArchiveStream).GetEntry($"{date}.csv");
 
                     if (singleHistoricalFileArchive != null)
                     {
