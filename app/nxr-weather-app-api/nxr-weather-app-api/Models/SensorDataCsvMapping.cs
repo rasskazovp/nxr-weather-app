@@ -4,6 +4,9 @@ using TinyCsvParser.TypeConverter;
 
 namespace nxr_weather_app_api.Models
 {
+    /// <summary>
+    /// Mapper for SensorData
+    /// </summary>
     public class SensorDataCsvMapping : CsvMapping<SensorData>
     {
         public SensorDataCsvMapping(NumberFormatInfo numberFormatProvider) : base()

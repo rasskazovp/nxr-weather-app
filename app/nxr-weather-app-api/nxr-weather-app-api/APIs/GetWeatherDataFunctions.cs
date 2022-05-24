@@ -35,8 +35,9 @@ namespace nxr_weather_app_api.APIs
         }
 
 
-
-
+        /// <summary>
+        /// Returns data for provided device, date and sensor type.
+        /// </summary>
         [FunctionName("getData")]
         [OpenApiOperation(operationId: "getData", tags: new[] { "getSensorsData" })]
         [OpenApiParameter(name: "deviceId", In = ParameterLocation.Path, Required = true, Type = typeof(string), Description = "An Id of weather measuring device parameter")]
@@ -71,9 +72,9 @@ namespace nxr_weather_app_api.APIs
         }
 
 
-
-
-
+        /// <summary>
+        /// Returns JSON data object for provided device and date for all sensors.
+        /// </summary>
         [FunctionName("getDataForDevice")]
         [OpenApiOperation(operationId: "getDataForDevice", tags: new[] { "getSensorsData" })]
         [OpenApiParameter(name: "deviceId", In = ParameterLocation.Path, Required = true, Type = typeof(string), Description = "An Id of weather measuring device parameter")]
@@ -132,7 +133,17 @@ namespace nxr_weather_app_api.APIs
 
 
 
-
+        /// <summary>
+        /// Searching storage structure for provided weather data.
+        /// First, check if exists uncompressed data.
+        /// If not found uncompressed data, checking if exists data in archive.
+        /// </summary>
+        /// <param name="iotContainier">Reference to storage containier.</param>
+        /// <param name="deviceId">Weather device Id</param>
+        /// <param name="sensorType">Weather sensor. For example: humidity/rainfall/temperature</param>
+        /// <param name="date">Day date for which data should be retrivated. Expected format "YYYY-MM-DD"</param>
+        /// <returns>List of SensorData objects.</returns>
+        /// <exception cref="FileNotFoundException">Throws FileNotFoundException when data for provided device was not found.</exception>
         private async Task<List<SensorData>> processGetSensorDataRequest(BlobContainerClient iotContainier, string deviceId, string sensorType, string date)
         {
             List<SensorData> parsedDataResult;
@@ -173,7 +184,11 @@ namespace nxr_weather_app_api.APIs
 
 
 
-
+        /// <summary>
+        /// Reads blob from storage and pass data stream for parsig to parseCsvContent function.
+        /// </summary>
+        /// <param name="blobClient">Reference to blob.</param>
+        /// <returns>List of SensorData objects.</returns>
         private async Task<List<SensorData>> readAndParseData(BlobClient blobClient)
         {
             _logger.LogInformation($"Reading blob from storage...");
@@ -187,8 +202,13 @@ namespace nxr_weather_app_api.APIs
         }
 
 
-
-
+        /// <summary>
+        /// Reading CSV data from provided stream and map it to SensorData objects.
+        /// </summary>
+        /// <param name="dataStream">CSV Data stream.</param>
+        /// <param name="skipHeaderchar">Bool value which defines if header should be skipped. Default = false.</param>
+        /// <param name="csvDelimiter">Delimiter value. Default = ";".</param>
+        /// <returns>List of SensorData objects.</returns>
         private List<SensorData> parseCsvContent(Stream dataStream, bool skipHeaderchar = false, char csvDelimiter = ';')
         {
             _logger.LogInformation("Parsing CSV content...");
@@ -208,6 +228,11 @@ namespace nxr_weather_app_api.APIs
             return dataResult.ToList(); // Not clear requirments regarding how output should look like, it could be adjuste here.
         }
 
+        /// <summary>
+        /// Defines expected number format
+        ///     - set decimal separator to ","
+        /// </summary>
+        /// <returns>NumberFormatInfo object with defined number format.</returns>
         private NumberFormatInfo getNumberFormatingInfo()
         {
             NumberFormatInfo numberFormatProvider = new NumberFormatInfo();
