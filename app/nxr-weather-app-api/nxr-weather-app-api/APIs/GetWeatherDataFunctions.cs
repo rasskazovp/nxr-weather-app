@@ -91,7 +91,7 @@ namespace nxr_weather_app_api.APIs
 
             try
             {
-                _logger.LogInformation($"Reading sensor types from metadata.");
+                _logger.LogInformation("Reading sensor types from metadata.");
                 List<SensorData> parsedDataResult = new List<SensorData>();
                 BlobClient metadataBlobClient = iotContainier.GetBlobClient("metadata.csv");
 
@@ -149,7 +149,7 @@ namespace nxr_weather_app_api.APIs
             List<SensorData> parsedDataResult;
 
             BlobClient dataBlobClient = iotContainier.GetBlobClient($"{deviceId}/{sensorType}/{date}.csv");
-            if (await dataBlobClient.ExistsAsync())     // Check if exists uncompressed data file
+            if (await dataBlobClient.ExistsAsync())
             {
                 parsedDataResult = await readAndParseData(dataBlobClient);
             }
