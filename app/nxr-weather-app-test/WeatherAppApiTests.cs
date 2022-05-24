@@ -6,7 +6,7 @@ using Microsoft.Extensions.Primitives;
 using Moq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using nxr_weather_app_api;
+using nxr_weather_app_api.APIs;
 using nxr_weather_app_api.Models;
 using System.Collections;
 
@@ -37,7 +37,7 @@ namespace nxr_weather_app_test
             };
 
             var request = createHttpRequest(requestParams);
-            var response = await new GetWeatherFunction(Mock.Of<ILogger<GetWeatherFunction>>()).getData(request);
+            var response = await new GetWeatherDataFunctions(Mock.Of<ILogger<GetWeatherDataFunctions>>()).getData(request);
 
             Assert.IsType<OkObjectResult>(response);
             Assert.NotEmpty((IEnumerable)((OkObjectResult)response).Value);
@@ -56,7 +56,7 @@ namespace nxr_weather_app_test
             };
 
             var request = createHttpRequest(requestParams);
-            var response = await new GetWeatherFunction(Mock.Of<ILogger<GetWeatherFunction>>()).getData(request);
+            var response = await new GetWeatherDataFunctions(Mock.Of<ILogger<GetWeatherDataFunctions>>()).getData(request);
 
             Assert.IsType<OkObjectResult>(response);
             var responseValue = (string)((OkObjectResult)response).Value;
@@ -80,7 +80,7 @@ namespace nxr_weather_app_test
             };
 
             var request = createHttpRequest(requestParams);
-            var response = await new GetWeatherFunction(Mock.Of<ILogger<GetWeatherFunction>>()).getData(request);
+            var response = await new GetWeatherDataFunctions(Mock.Of<ILogger<GetWeatherDataFunctions>>()).getData(request);
 
             Assert.IsType<BadRequestObjectResult>(response);
 
@@ -102,7 +102,7 @@ namespace nxr_weather_app_test
             };
 
             var request = createHttpRequest(requestParams);
-            var response = await new GetWeatherFunction(Mock.Of<ILogger<GetWeatherFunction>>()).getDataForDevice(request);
+            var response = await new GetWeatherDataFunctions(Mock.Of<ILogger<GetWeatherDataFunctions>>()).getDataForDevice(request);
 
             Assert.IsType<OkObjectResult>(response);
             Assert.NotEmpty((IEnumerable)((OkObjectResult)response).Value);
@@ -120,7 +120,7 @@ namespace nxr_weather_app_test
             };
 
             var request = createHttpRequest(requestParams);
-            var response = await new GetWeatherFunction(Mock.Of<ILogger<GetWeatherFunction>>()).getDataForDevice(request);
+            var response = await new GetWeatherDataFunctions(Mock.Of<ILogger<GetWeatherDataFunctions>>()).getDataForDevice(request);
 
             Assert.IsType<OkObjectResult>(response);
             var responseValue = (string)((OkObjectResult)response).Value;
@@ -142,7 +142,7 @@ namespace nxr_weather_app_test
             };
 
             var request = createHttpRequest(requestParams);
-            var response = await new GetWeatherFunction(Mock.Of<ILogger<GetWeatherFunction>>()).getDataForDevice(request);
+            var response = await new GetWeatherDataFunctions(Mock.Of<ILogger<GetWeatherDataFunctions>>()).getDataForDevice(request);
 
             Assert.IsType<BadRequestObjectResult>(response);
             var responseValue = ((BadRequestObjectResult)response).Value;

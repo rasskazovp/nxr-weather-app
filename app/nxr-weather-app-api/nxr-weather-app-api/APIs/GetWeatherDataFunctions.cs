@@ -21,20 +21,23 @@ using TinyCsvParser;
 using TinyCsvParser.Mapping;
 using TinyCsvParser.TypeConverter;
 
-namespace nxr_weather_app_api
+namespace nxr_weather_app_api.APIs
 {
-    public class GetWeatherFunction
+    public class GetWeatherDataFunctions
     {
         private readonly ILogger _logger;
         private readonly string _backEndStorageConnString;
         private readonly string _backEndContainierName;
 
-        public GetWeatherFunction(ILogger<GetWeatherFunction> log)
+        public GetWeatherDataFunctions(ILogger<GetWeatherDataFunctions> log)
         {
             _logger = log;
             _backEndStorageConnString = Environment.GetEnvironmentVariable("sigma-iot-storage-conn-string");
             _backEndContainierName = "iotbackend";
         }
+
+
+
 
         [FunctionName("getData")]
         [OpenApiOperation(operationId: "getData", tags: new[] { "getSensorsData" })]
@@ -66,6 +69,10 @@ namespace nxr_weather_app_api
             }
         }
 
+
+
+
+
         [FunctionName("getDataForDevice")]
         [OpenApiOperation(operationId: "getDataForDevice", tags: new[] { "getSensorsData" })]
         [OpenApiParameter(name: "deviceId", In = ParameterLocation.Query, Required = true, Type = typeof(string), Description = "An Id of weather measuring device parameter")]
@@ -95,7 +102,7 @@ namespace nxr_weather_app_api
                         string line;
                         while ((line = sr.ReadLine()) != null)
                         {
-                            string [] lineElems = line.Split(';');
+                            string[] lineElems = line.Split(';');
                             if (lineElems[0] == deviceId)
                             {
                                 parsedDataResult.AddRange(
@@ -104,6 +111,7 @@ namespace nxr_weather_app_api
                             }
                         }
                     }
+
                     if (!parsedDataResult.Any()) throw new FileNotFoundException($"No data were found for {deviceId}.");
                 }
                 return new OkObjectResult(JsonConvert.SerializeObject(parsedDataResult));
@@ -120,6 +128,9 @@ namespace nxr_weather_app_api
             }
         }
 
+
+
+
         private async Task<List<SensorData>> processGetSensorDataRequest(BlobContainerClient iotContainier, string deviceId, string sensorType, string date)
         {
             List<SensorData> parsedDataResult;
@@ -132,8 +143,8 @@ namespace nxr_weather_app_api
             else
             {
                 BlobClient historicalDataArchiveBlobClient = iotContainier.GetBlobClient($"{deviceId}/{sensorType}/historical.zip");
-                
-                if (!await historicalDataArchiveBlobClient.ExistsAsync()) 
+
+                if (!await historicalDataArchiveBlobClient.ExistsAsync())
                     throw new FileNotFoundException($"{deviceId}/{sensorType}/historical.zip file not exists.");
 
                 using (var historicalDataArchiveStream = new MemoryStream())
@@ -145,21 +156,21 @@ namespace nxr_weather_app_api
 
                     if (singleHistoricalFileArchive != null)
                     {
-                        _logger.LogInformation($"Reading {sensorType} sensor data from comressed file.");
+                        _logger.LogInformation($"Reading {sensorType} sensor data from comressed file...");
 
                         using (var singleHistoricalFileStream = singleHistoricalFileArchive.Open())
                         {
                             parsedDataResult = parseCsvContent(singleHistoricalFileStream);
                         }
                     }
-                    else
-                    {
-                        throw new FileNotFoundException($"Data for requested device={deviceId}, sensor={sensorType} and date={date} not found");     
-                    }
+                    else throw new FileNotFoundException($"Data for requested device={deviceId}, sensor={sensorType} and date={date} not found");
                 }
             }
             return parsedDataResult;
         }
+
+
+
 
         private async Task<List<SensorData>> readAndParseData(BlobClient blobClient)
         {
@@ -173,16 +184,19 @@ namespace nxr_weather_app_api
             }
         }
 
-        private List<SensorData> parseCsvContent(Stream dataStream, bool skipHeaderchar=false, char csvDelimiter=';')
+
+
+
+        private List<SensorData> parseCsvContent(Stream dataStream, bool skipHeaderchar = false, char csvDelimiter = ';')
         {
             _logger.LogInformation("Parsing CSV content...");
 
-            NumberFormatInfo numberFormatProvider = new NumberFormatInfo();
-            numberFormatProvider.NumberDecimalSeparator = ",";
+            NumberFormatInfo numberFormatProvider = getNumberFormatingInfo();
 
             CsvParserOptions csvParserOptions = new CsvParserOptions(skipHeaderchar, csvDelimiter);
-            CsvSensorDataMapping csvMapper = new CsvSensorDataMapping(numberFormatProvider);
+            SensorDataCsvMapping csvMapper = new SensorDataCsvMapping(numberFormatProvider);
             CsvParser<SensorData> csvParser = new CsvParser<SensorData>(csvParserOptions, csvMapper);
+
             var parsingResults = csvParser.ReadFromStream(dataStream, Encoding.UTF8);
 
             // Potential parsing error could be logged here.
@@ -191,14 +205,13 @@ namespace nxr_weather_app_api
 
             return dataResult.ToList(); // Not clear requirments regarding how output should look like, it could be adjuste here.
         }
-    }
 
-    public class CsvSensorDataMapping : CsvMapping<SensorData>
-    {
-        public CsvSensorDataMapping(NumberFormatInfo numberFormatProvider) : base()
+        private NumberFormatInfo getNumberFormatingInfo()
         {
-            MapProperty(0, x => x.EventDateTime);
-            MapProperty(1, x => x.SensorValue, new DoubleConverter(numberFormatProvider));
+            NumberFormatInfo numberFormatProvider = new NumberFormatInfo();
+            numberFormatProvider.NumberDecimalSeparator = ",";
+
+            return numberFormatProvider;
         }
     }
 }
