@@ -39,12 +39,15 @@ namespace nxr_weather_app_api.APIs
 
         [FunctionName("getData")]
         [OpenApiOperation(operationId: "getData", tags: new[] { "getSensorsData" })]
-        [OpenApiParameter(name: "deviceId", In = ParameterLocation.Query, Required = true, Type = typeof(string), Description = "An Id of weather measuring device parameter")]
-        [OpenApiParameter(name: "date", In = ParameterLocation.Query, Required = true, Type = typeof(string), Description = "Date for which weather summary should be provided in format YYYY-MM-DD")]
-        [OpenApiParameter(name: "sensorType", In = ParameterLocation.Query, Required = true, Type = typeof(string), Description = "sensorType for which data should be provides. For example: humidity")]
+        [OpenApiParameter(name: "deviceId", In = ParameterLocation.Path, Required = true, Type = typeof(string), Description = "An Id of weather measuring device parameter")]
+        [OpenApiParameter(name: "date", In = ParameterLocation.Path, Required = true, Type = typeof(string), Description = "Date for which weather summary should be provided in format YYYY-MM-DD")]
+        [OpenApiParameter(name: "sensorType", In = ParameterLocation.Path, Required = true, Type = typeof(string), Description = "sensorType for which data should be provides. For example: humidity")]
         [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/json", bodyType: typeof(string), Description = "All measurements for one day, one sensor type, and one unit")]
         public async Task<IActionResult> getData(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = null)] HttpRequest req)
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "v1/device/{deviceId}/data/{date}/{sensorType}")] HttpRequest req,
+            string deviceId,
+            string date,
+            string sensorType)
         {
             _logger.LogInformation("C# HTTP trigger function processed a request.");
 
@@ -52,7 +55,7 @@ namespace nxr_weather_app_api.APIs
 
             try
             {
-                List<SensorData> parsedDataResult = await processGetSensorDataRequest(iotContainier, req.Query["deviceId"], req.Query["sensorType"], req.Query["date"]);
+                List<SensorData> parsedDataResult = await processGetSensorDataRequest(iotContainier, deviceId, sensorType, date);
                 return new OkObjectResult(JsonConvert.SerializeObject(parsedDataResult));
             }
             catch (FileNotFoundException ex)
@@ -73,16 +76,17 @@ namespace nxr_weather_app_api.APIs
 
         [FunctionName("getDataForDevice")]
         [OpenApiOperation(operationId: "getDataForDevice", tags: new[] { "getSensorsData" })]
-        [OpenApiParameter(name: "deviceId", In = ParameterLocation.Query, Required = true, Type = typeof(string), Description = "An Id of weather measuring device parameter")]
-        [OpenApiParameter(name: "date", In = ParameterLocation.Query, Required = true, Type = typeof(string), Description = "Date for which weather summary should be provided in format YYYY-MM-DD")]
+        [OpenApiParameter(name: "deviceId", In = ParameterLocation.Path, Required = true, Type = typeof(string), Description = "An Id of weather measuring device parameter")]
+        [OpenApiParameter(name: "date", In = ParameterLocation.Path, Required = true, Type = typeof(string), Description = "Date for which weather summary should be provided in format YYYY-MM-DD")]
         [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/json", bodyType: typeof(string), Description = "All measurements for one day, one sensor type, and one unit")]
         public async Task<IActionResult> getDataForDevice(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = null)] HttpRequest req)
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "v1/devices/{deviceId}/data/{date}")] HttpRequest req,
+            string deviceId,
+            string date)
         {
             _logger.LogInformation("C# HTTP trigger function processed a request.");
 
             BlobContainerClient iotContainier = new BlobContainerClient(_backEndStorageConnString, _backEndContainierName);
-            string deviceId = req.Query["deviceId"];
 
             try
             {
@@ -104,7 +108,7 @@ namespace nxr_weather_app_api.APIs
                             if (lineElems[0] == deviceId)
                             {
                                 parsedDataResult.AddRange(
-                                    await processGetSensorDataRequest(iotContainier, req.Query["deviceId"], lineElems[1], req.Query["date"])
+                                    await processGetSensorDataRequest(iotContainier, deviceId, lineElems[1], date)
                                 );
                             }
                         }

@@ -14,7 +14,12 @@ namespace nxr_weather_app_test
 {
     public class WeatherAppApiTests
     {
+        ILogger<GetWeatherDataFunctions> _logger;
+
         public WeatherAppApiTests (){
+            
+            _logger = Mock.Of<ILogger<GetWeatherDataFunctions>>();
+
             using (var file = File.OpenText(@"Properties\launchSettings.json"))
             {
                 var reader = new JsonTextReader(file);
@@ -33,14 +38,8 @@ namespace nxr_weather_app_test
         [InlineData("dockan", "rainfall", "2019-01-05")]
         public async void getData_checkIfAnyDataReturned(string deviceId, string sensorType, string date)
         {
-            var requestParams = new Dictionary<string, StringValues>() {
-                { "deviceId", deviceId },
-                { "sensorType", sensorType },
-                { "date", date }
-            };
-
-            var request = createHttpRequest(requestParams);
-            var response = await new GetWeatherDataFunctions(Mock.Of<ILogger<GetWeatherDataFunctions>>()).getData(request);
+            var request = createHttpRequest();
+            var response = await new GetWeatherDataFunctions(_logger).getData(request, deviceId, date, sensorType);
 
             Assert.IsType<OkObjectResult>(response);
             Assert.NotEmpty((IEnumerable)((OkObjectResult)response).Value);
@@ -52,14 +51,8 @@ namespace nxr_weather_app_test
         [InlineData("dockan", "rainfall", "2019-01-12", 15.4)]
         public async void getData_checkSums(string deviceId, string sensorType, string date, double expectedResult)
         {
-            var requestParams = new Dictionary<string, StringValues>() {
-                { "deviceId", deviceId },
-                { "sensorType", sensorType },
-                { "date", date }
-            };
-
-            var request = createHttpRequest(requestParams);
-            var response = await new GetWeatherDataFunctions(Mock.Of<ILogger<GetWeatherDataFunctions>>()).getData(request);
+            var request = createHttpRequest();
+            var response = await new GetWeatherDataFunctions(_logger).getData(request, deviceId, date, sensorType);
 
             Assert.IsType<OkObjectResult>(response);
             var responseValue = (string)((OkObjectResult)response).Value;
@@ -76,14 +69,8 @@ namespace nxr_weather_app_test
         [InlineData("dockan", "notExisting", "2022-01-05")]
         public async void getData_checkNoDataException(string deviceId, string sensorType, string date)
         {
-            var requestParams = new Dictionary<string, StringValues>() {
-                { "deviceId", deviceId },
-                { "sensorType", sensorType },
-                { "date", date }
-            };
-
-            var request = createHttpRequest(requestParams);
-            var response = await new GetWeatherDataFunctions(Mock.Of<ILogger<GetWeatherDataFunctions>>()).getData(request);
+            var request = createHttpRequest();
+            var response = await new GetWeatherDataFunctions(_logger).getData(request, deviceId, date, sensorType);
 
             Assert.IsType<BadRequestObjectResult>(response);
 
@@ -99,13 +86,8 @@ namespace nxr_weather_app_test
         [InlineData("dockan", "2019-01-05")]
         public async void getDataForDevice_checkIfAnyDataReturned(string deviceId, string date)
         {
-            var requestParams = new Dictionary<string, StringValues>() {
-                { "deviceId", deviceId },
-                { "date", date }
-            };
-
-            var request = createHttpRequest(requestParams);
-            var response = await new GetWeatherDataFunctions(Mock.Of<ILogger<GetWeatherDataFunctions>>()).getDataForDevice(request);
+            var request = createHttpRequest();
+            var response = await new GetWeatherDataFunctions(_logger).getDataForDevice(request, deviceId, date);
 
             Assert.IsType<OkObjectResult>(response);
             Assert.NotEmpty((IEnumerable)((OkObjectResult)response).Value);
@@ -117,13 +99,8 @@ namespace nxr_weather_app_test
         [InlineData("dockan", "2019-01-12", 426733.32)]
         public async void getDataForDevice_checkSums(string deviceId, string date, double expectedResult)
         {
-            var requestParams = new Dictionary<string, StringValues>() {
-                { "deviceId", deviceId },
-                { "date", date }
-            };
-
-            var request = createHttpRequest(requestParams);
-            var response = await new GetWeatherDataFunctions(Mock.Of<ILogger<GetWeatherDataFunctions>>()).getDataForDevice(request);
+            var request = createHttpRequest();
+            var response = await new GetWeatherDataFunctions(_logger).getDataForDevice(request, deviceId, date);
 
             Assert.IsType<OkObjectResult>(response);
             var responseValue = (string)((OkObjectResult)response).Value;
@@ -139,13 +116,8 @@ namespace nxr_weather_app_test
         [InlineData("notExisting", "2022-01-05")]
         public async void getDataForDevice_checkNoDataException(string deviceId, string date)
         {
-            var requestParams = new Dictionary<string, StringValues>() {
-                { "deviceId", deviceId },
-                { "date", date }
-            };
-
-            var request = createHttpRequest(requestParams);
-            var response = await new GetWeatherDataFunctions(Mock.Of<ILogger<GetWeatherDataFunctions>>()).getDataForDevice(request);
+            var request = createHttpRequest();
+            var response = await new GetWeatherDataFunctions(_logger).getDataForDevice(request, deviceId, date);
 
             Assert.IsType<BadRequestObjectResult>(response);
             var responseValue = ((BadRequestObjectResult)response).Value;
@@ -154,12 +126,9 @@ namespace nxr_weather_app_test
             Assert.Equal("Data Not Found", responseResult["status"]);
         }
 
-        private DefaultHttpRequest createHttpRequest(Dictionary<string, StringValues> queryParams)
+        private DefaultHttpRequest createHttpRequest()
         {
-            var request = new DefaultHttpRequest(new DefaultHttpContext());
-            request.Query = new QueryCollection(queryParams);
-
-            return request;
+            return new DefaultHttpRequest(new DefaultHttpContext());
         }
     }
 }
