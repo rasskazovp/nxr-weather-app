@@ -1,0 +1,5 @@
+app/nxr-weather-app-test/bin
+app/nxr-weather-app-test/obj
+
+.vs
+app/nxr-weather-app-api/.vs
